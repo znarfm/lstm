@@ -2,7 +2,7 @@ import numpy as np
 
 
 def sigmoid(x):
-    return 1.0 / (1 + np.exp(-x))
+    return 0.5 * (1 + np.tanh(0.5 * x))
 
 
 def sigmoid_derivative(values):
@@ -15,7 +15,6 @@ def tanh_derivative(values):
 
 # createst uniform random array w/ values in [a,b) and shape args
 def rand_arr(a, b, *args):
-    np.random.seed(0)
     return np.random.rand(*args) * (b - a) + a
 
 
@@ -101,14 +100,15 @@ class LstmNode:
         self.state.f = sigmoid(np.dot(self.param.wf, xc) + self.param.bf)
         self.state.o = sigmoid(np.dot(self.param.wo, xc) + self.param.bo)
         self.state.s = self.state.g * self.state.i + s_prev * self.state.f
-        self.state.h = self.state.s * self.state.o
+        self.state.h = np.tanh(self.state.s) * self.state.o
 
         self.xc = xc
 
     def top_diff_is(self, top_diff_h, top_diff_s):
         # notice that top_diff_s is carried along the constant error carousel
-        ds = self.state.o * top_diff_h + top_diff_s
-        do = self.state.s * top_diff_h
+        s_tanh = np.tanh(self.state.s)
+        ds = self.state.o * top_diff_h * (1 - s_tanh**2) + top_diff_s
+        do = s_tanh * top_diff_h
         di = self.state.g * ds
         dg = self.state.i * ds
         df = self.s_prev * ds
