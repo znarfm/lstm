@@ -13,8 +13,9 @@ def tanh_grad(values):
     return 1.0 - values**2
 
 
-def random_uniform(low, high, *shape):
-    return np.random.rand(*shape) * (high - low) + low
+def xavier_init(fan_in, fan_out):
+    limit = np.sqrt(6 / (fan_in + fan_out))
+    return np.random.uniform(-limit, limit, (fan_out, fan_in))
 
 
 class LstmParam:
@@ -24,16 +25,16 @@ class LstmParam:
         concat_size = input_size + hidden_size
 
         # Weight matrices for each gate/node (shape: hidden_size x concat_size)
-        self.weight_cell = random_uniform(-0.1, 0.1, hidden_size, concat_size)
-        self.weight_input_gate = random_uniform(-0.1, 0.1, hidden_size, concat_size)
-        self.weight_forget_gate = random_uniform(-0.1, 0.1, hidden_size, concat_size)
-        self.weight_output_gate = random_uniform(-0.1, 0.1, hidden_size, concat_size)
+        self.weight_cell = xavier_init(concat_size, hidden_size)
+        self.weight_input_gate = xavier_init(concat_size, hidden_size)
+        self.weight_forget_gate = xavier_init(concat_size, hidden_size)
+        self.weight_output_gate = xavier_init(concat_size, hidden_size)
 
         # Bias vectors for each gate/node
-        self.bias_cell = random_uniform(-0.1, 0.1, hidden_size)
-        self.bias_input_gate = random_uniform(-0.1, 0.1, hidden_size)
-        self.bias_forget_gate = random_uniform(-0.1, 0.1, hidden_size)
-        self.bias_output_gate = random_uniform(-0.1, 0.1, hidden_size)
+        self.bias_cell = np.zeros(hidden_size)
+        self.bias_input_gate = np.ones(hidden_size)
+        self.bias_forget_gate = np.zeros(hidden_size)
+        self.bias_output_gate = np.zeros(hidden_size)
 
         # Gradient accumulators (derivative of loss w.r.t. each parameter)
         self.weight_cell_grad = np.zeros((hidden_size, concat_size))
