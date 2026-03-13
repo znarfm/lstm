@@ -5,196 +5,251 @@ def sigmoid(x):
     return 0.5 * (1 + np.tanh(0.5 * x))
 
 
-def sigmoid_derivative(values):
+def sigmoid_grad(values):
     return values * (1 - values)
 
 
-def tanh_derivative(values):
+def tanh_grad(values):
     return 1.0 - values**2
 
 
-# createst uniform random array w/ values in [a,b) and shape args
-def rand_arr(a, b, *args):
-    return np.random.rand(*args) * (b - a) + a
+def random_uniform(low, high, *shape):
+    return np.random.rand(*shape) * (high - low) + low
 
 
 class LstmParam:
-    def __init__(self, mem_cell_ct, x_dim):
-        self.mem_cell_ct = mem_cell_ct
-        self.x_dim = x_dim
-        concat_len = x_dim + mem_cell_ct
-        # weight matrices
-        self.wg = rand_arr(-0.1, 0.1, mem_cell_ct, concat_len)
-        self.wi = rand_arr(-0.1, 0.1, mem_cell_ct, concat_len)
-        self.wf = rand_arr(-0.1, 0.1, mem_cell_ct, concat_len)
-        self.wo = rand_arr(-0.1, 0.1, mem_cell_ct, concat_len)
-        # bias terms
-        self.bg = rand_arr(-0.1, 0.1, mem_cell_ct)
-        self.bi = rand_arr(-0.1, 0.1, mem_cell_ct)
-        self.bf = rand_arr(-0.1, 0.1, mem_cell_ct)
-        self.bo = rand_arr(-0.1, 0.1, mem_cell_ct)
-        # diffs (derivative of loss function w.r.t. all parameters)
-        self.wg_diff = np.zeros((mem_cell_ct, concat_len))
-        self.wi_diff = np.zeros((mem_cell_ct, concat_len))
-        self.wf_diff = np.zeros((mem_cell_ct, concat_len))
-        self.wo_diff = np.zeros((mem_cell_ct, concat_len))
-        self.bg_diff = np.zeros(mem_cell_ct)
-        self.bi_diff = np.zeros(mem_cell_ct)
-        self.bf_diff = np.zeros(mem_cell_ct)
-        self.bo_diff = np.zeros(mem_cell_ct)
+    def __init__(self, hidden_size, input_size):
+        self.hidden_size = hidden_size
+        self.input_size = input_size
+        concat_size = input_size + hidden_size
 
-    def apply_diff(self, lr=1):
-        self.wg -= lr * self.wg_diff
-        self.wi -= lr * self.wi_diff
-        self.wf -= lr * self.wf_diff
-        self.wo -= lr * self.wo_diff
-        self.bg -= lr * self.bg_diff
-        self.bi -= lr * self.bi_diff
-        self.bf -= lr * self.bf_diff
-        self.bo -= lr * self.bo_diff
-        # reset diffs to zero
-        self.wg_diff = np.zeros_like(self.wg)
-        self.wi_diff = np.zeros_like(self.wi)
-        self.wf_diff = np.zeros_like(self.wf)
-        self.wo_diff = np.zeros_like(self.wo)
-        self.bg_diff = np.zeros_like(self.bg)
-        self.bi_diff = np.zeros_like(self.bi)
-        self.bf_diff = np.zeros_like(self.bf)
-        self.bo_diff = np.zeros_like(self.bo)
+        # Weight matrices for each gate/node (shape: hidden_size x concat_size)
+        self.weight_cell = random_uniform(-0.1, 0.1, hidden_size, concat_size)
+        self.weight_input_gate = random_uniform(-0.1, 0.1, hidden_size, concat_size)
+        self.weight_forget_gate = random_uniform(-0.1, 0.1, hidden_size, concat_size)
+        self.weight_output_gate = random_uniform(-0.1, 0.1, hidden_size, concat_size)
+
+        # Bias vectors for each gate/node
+        self.bias_cell = random_uniform(-0.1, 0.1, hidden_size)
+        self.bias_input_gate = random_uniform(-0.1, 0.1, hidden_size)
+        self.bias_forget_gate = random_uniform(-0.1, 0.1, hidden_size)
+        self.bias_output_gate = random_uniform(-0.1, 0.1, hidden_size)
+
+        # Gradient accumulators (derivative of loss w.r.t. each parameter)
+        self.weight_cell_grad = np.zeros((hidden_size, concat_size))
+        self.weight_input_gate_grad = np.zeros((hidden_size, concat_size))
+        self.weight_forget_gate_grad = np.zeros((hidden_size, concat_size))
+        self.weight_output_gate_grad = np.zeros((hidden_size, concat_size))
+        self.bias_cell_grad = np.zeros(hidden_size)
+        self.bias_input_gate_grad = np.zeros(hidden_size)
+        self.bias_forget_gate_grad = np.zeros(hidden_size)
+        self.bias_output_gate_grad = np.zeros(hidden_size)
+
+    def apply_gradients(self, lr=1):
+        self.weight_cell -= lr * self.weight_cell_grad
+        self.weight_input_gate -= lr * self.weight_input_gate_grad
+        self.weight_forget_gate -= lr * self.weight_forget_gate_grad
+        self.weight_output_gate -= lr * self.weight_output_gate_grad
+        self.bias_cell -= lr * self.bias_cell_grad
+        self.bias_input_gate -= lr * self.bias_input_gate_grad
+        self.bias_forget_gate -= lr * self.bias_forget_gate_grad
+        self.bias_output_gate -= lr * self.bias_output_gate_grad
+
+        # Reset gradient accumulators to zero after each update
+        self.weight_cell_grad = np.zeros_like(self.weight_cell)
+        self.weight_input_gate_grad = np.zeros_like(self.weight_input_gate)
+        self.weight_forget_gate_grad = np.zeros_like(self.weight_forget_gate)
+        self.weight_output_gate_grad = np.zeros_like(self.weight_output_gate)
+        self.bias_cell_grad = np.zeros_like(self.bias_cell)
+        self.bias_input_gate_grad = np.zeros_like(self.bias_input_gate)
+        self.bias_forget_gate_grad = np.zeros_like(self.bias_forget_gate)
+        self.bias_output_gate_grad = np.zeros_like(self.bias_output_gate)
 
 
 class LstmState:
-    def __init__(self, mem_cell_ct, x_dim):
-        self.g = np.zeros(mem_cell_ct)
-        self.i = np.zeros(mem_cell_ct)
-        self.f = np.zeros(mem_cell_ct)
-        self.o = np.zeros(mem_cell_ct)
-        self.s = np.zeros(mem_cell_ct)
-        self.h = np.zeros(mem_cell_ct)
-        self.bottom_diff_h = np.zeros_like(self.h)
-        self.bottom_diff_s = np.zeros_like(self.s)
+    def __init__(self, hidden_size, input_size):
+        self.cell_input = np.zeros(hidden_size)  # g: new candidate info (tanh)
+        self.input_gate = np.zeros(hidden_size)  # i: how much new info to write
+        self.forget_gate = np.zeros(hidden_size)  # f: how much old memory to keep
+        self.output_gate = np.zeros(hidden_size)  # o: what to expose from memory
+        self.cell_state = np.zeros(
+            hidden_size
+        )  # s: the long-term memory ("conveyor belt")
+        self.hidden_state = np.zeros(hidden_size)  # h: the output at this time step
+        self.grad_prev_hidden = np.zeros_like(
+            self.hidden_state
+        )  # gradient flowing back to h(t-1)
+        self.grad_prev_cell = np.zeros_like(
+            self.cell_state
+        )  # gradient flowing back to s(t-1)
 
 
 class LstmNode:
     def __init__(self, lstm_param, lstm_state):
-        # store reference to parameters and to activations
         self.state = lstm_state
         self.param = lstm_param
-        # non-recurrent input concatenated with recurrent input
-        self.xc = None
+        self.concat_input = None  # x(t) concatenated with h(t-1), saved for backprop
 
-    def bottom_data_is(self, x, s_prev=None, h_prev=None):
-        # if this is the first lstm node in the network
-        if s_prev is None:
-            s_prev = np.zeros_like(self.state.s)
-        if h_prev is None:
-            h_prev = np.zeros_like(self.state.h)
-        # save data for use in backprop
-        self.s_prev = s_prev
-        self.h_prev = h_prev
+    def forward(self, x, prev_cell_state=None, prev_hidden_state=None):
+        # Use zero vectors for the first time step (no previous state)
+        if prev_cell_state is None:
+            prev_cell_state = np.zeros_like(self.state.cell_state)
+        if prev_hidden_state is None:
+            prev_hidden_state = np.zeros_like(self.state.hidden_state)
 
-        # concatenate x(t) and h(t-1)
-        xc = np.hstack((x, h_prev))
-        self.state.g = np.tanh(np.dot(self.param.wg, xc) + self.param.bg)
-        self.state.i = sigmoid(np.dot(self.param.wi, xc) + self.param.bi)
-        self.state.f = sigmoid(np.dot(self.param.wf, xc) + self.param.bf)
-        self.state.o = sigmoid(np.dot(self.param.wo, xc) + self.param.bo)
-        self.state.s = self.state.g * self.state.i + s_prev * self.state.f
-        self.state.h = np.tanh(self.state.s) * self.state.o
+        # Save previous states for use in backprop
+        self.prev_cell_state = prev_cell_state
+        self.prev_hidden_state = prev_hidden_state
 
-        self.xc = xc
+        # Concatenate current input x(t) with previous hidden state h(t-1)
+        concat_input = np.hstack((x, prev_hidden_state))
 
-    def top_diff_is(self, top_diff_h, top_diff_s):
-        # notice that top_diff_s is carried along the constant error carousel
-        s_tanh = np.tanh(self.state.s)
-        ds = self.state.o * top_diff_h * (1 - s_tanh**2) + top_diff_s
-        do = s_tanh * top_diff_h
-        di = self.state.g * ds
-        dg = self.state.i * ds
-        df = self.s_prev * ds
+        # Compute gate activations
+        self.state.cell_input = np.tanh(
+            np.dot(self.param.weight_cell, concat_input) + self.param.bias_cell
+        )
+        self.state.input_gate = sigmoid(
+            np.dot(self.param.weight_input_gate, concat_input)
+            + self.param.bias_input_gate
+        )
+        self.state.forget_gate = sigmoid(
+            np.dot(self.param.weight_forget_gate, concat_input)
+            + self.param.bias_forget_gate
+        )
+        self.state.output_gate = sigmoid(
+            np.dot(self.param.weight_output_gate, concat_input)
+            + self.param.bias_output_gate
+        )
 
-        # diffs w.r.t. vector inside sigma / tanh function
-        di_input = sigmoid_derivative(self.state.i) * di
-        df_input = sigmoid_derivative(self.state.f) * df
-        do_input = sigmoid_derivative(self.state.o) * do
-        dg_input = tanh_derivative(self.state.g) * dg
+        # Update cell state: keep old memory (forget gate) + write new info (input gate)
+        self.state.cell_state = (
+            self.state.cell_input * self.state.input_gate
+            + prev_cell_state * self.state.forget_gate
+        )
+        # Compute hidden state: expose filtered memory through output gate
+        self.state.hidden_state = (
+            np.tanh(self.state.cell_state) * self.state.output_gate
+        )
 
-        # diffs w.r.t. inputs
-        self.param.wi_diff += np.outer(di_input, self.xc)
-        self.param.wf_diff += np.outer(df_input, self.xc)
-        self.param.wo_diff += np.outer(do_input, self.xc)
-        self.param.wg_diff += np.outer(dg_input, self.xc)
-        self.param.bi_diff += di_input
-        self.param.bf_diff += df_input
-        self.param.bo_diff += do_input
-        self.param.bg_diff += dg_input
+        self.concat_input = concat_input
 
-        # compute bottom diff
-        dxc = np.zeros_like(self.xc)
-        dxc += np.dot(self.param.wi.T, di_input)
-        dxc += np.dot(self.param.wf.T, df_input)
-        dxc += np.dot(self.param.wo.T, do_input)
-        dxc += np.dot(self.param.wg.T, dg_input)
+    def backward(self, grad_hidden, grad_cell):
+        # grad_hidden: gradient of loss w.r.t. hidden_state at this time step
+        # grad_cell:   gradient flowing back along the cell state (constant error carousel)
 
-        # save bottom diffs
-        self.state.bottom_diff_s = ds * self.state.f
-        self.state.bottom_diff_h = dxc[self.param.x_dim :]
+        cell_state_tanh = np.tanh(self.state.cell_state)
+
+        # Backprop through cell state tanh and output gate
+        delta_cell_state = (
+            self.state.output_gate * grad_hidden * (1 - cell_state_tanh**2) + grad_cell
+        )
+        delta_output_gate = cell_state_tanh * grad_hidden
+
+        # Backprop into each gate's pre-activation value
+        delta_input_gate = self.state.cell_input * delta_cell_state
+        delta_cell_input = self.state.input_gate * delta_cell_state
+        delta_forget_gate = self.prev_cell_state * delta_cell_state
+
+        # Apply activation function derivatives (chain rule)
+        delta_input_gate_raw = sigmoid_grad(self.state.input_gate) * delta_input_gate
+        delta_forget_gate_raw = sigmoid_grad(self.state.forget_gate) * delta_forget_gate
+        delta_output_gate_raw = sigmoid_grad(self.state.output_gate) * delta_output_gate
+        delta_cell_input_raw = tanh_grad(self.state.cell_input) * delta_cell_input
+
+        # Accumulate weight gradients (outer product: delta x concat_input^T)
+        self.param.weight_input_gate_grad += np.outer(
+            delta_input_gate_raw, self.concat_input
+        )
+        self.param.weight_forget_gate_grad += np.outer(
+            delta_forget_gate_raw, self.concat_input
+        )
+        self.param.weight_output_gate_grad += np.outer(
+            delta_output_gate_raw, self.concat_input
+        )
+        self.param.weight_cell_grad += np.outer(delta_cell_input_raw, self.concat_input)
+
+        # Accumulate bias gradients
+        self.param.bias_input_gate_grad += delta_input_gate_raw
+        self.param.bias_forget_gate_grad += delta_forget_gate_raw
+        self.param.bias_output_gate_grad += delta_output_gate_raw
+        self.param.bias_cell_grad += delta_cell_input_raw
+
+        # Compute gradient w.r.t. the concatenated input to propagate backwards
+        grad_concat_input = np.zeros_like(self.concat_input)
+        grad_concat_input += np.dot(
+            self.param.weight_input_gate.T, delta_input_gate_raw
+        )
+        grad_concat_input += np.dot(
+            self.param.weight_forget_gate.T, delta_forget_gate_raw
+        )
+        grad_concat_input += np.dot(
+            self.param.weight_output_gate.T, delta_output_gate_raw
+        )
+        grad_concat_input += np.dot(self.param.weight_cell.T, delta_cell_input_raw)
+
+        # Split concat gradient: the h(t-1) portion flows back to the previous node
+        self.state.grad_prev_cell = delta_cell_state * self.state.forget_gate
+        self.state.grad_prev_hidden = grad_concat_input[self.param.input_size :]
 
 
 class LstmNetwork:
     def __init__(self, lstm_param):
         self.lstm_param = lstm_param
-        self.lstm_node_list = []
-        # input sequence
-        self.x_list = []
+        self.time_steps = []  # one LstmNode per time step
+        self.inputs = []  # input sequence
 
-    def y_list_is(self, y_list, loss_layer):
+    def compute_loss_and_grads(self, target_list, loss_layer):
         """
-        Updates diffs by setting target sequence
-        with corresponding loss layer.
-        Will *NOT* update parameters.  To update parameters,
-        call self.lstm_param.apply_diff()
+        Run backpropagation through time (BPTT).
+        Computes gradients for all time steps given the targets.
+        Does NOT update parameters — call lstm_param.apply_gradients() separately.
         """
-        assert len(y_list) == len(self.x_list)
-        idx = len(self.x_list) - 1
-        # first node only gets diffs from label ...
-        loss = loss_layer.loss(self.lstm_node_list[idx].state.h, y_list[idx])
-        diff_h = loss_layer.bottom_diff(self.lstm_node_list[idx].state.h, y_list[idx])
-        # here s is not affecting loss due to h(t+1), hence we set equal to zero
-        diff_s = np.zeros(self.lstm_param.mem_cell_ct)
-        self.lstm_node_list[idx].top_diff_is(diff_h, diff_s)
+        assert len(target_list) == len(self.inputs)
+
+        # Start from the last time step
+        idx = len(self.inputs) - 1
+        loss = loss_layer.loss(
+            self.time_steps[idx].state.hidden_state, target_list[idx]
+        )
+        grad_hidden = loss_layer.bottom_diff(
+            self.time_steps[idx].state.hidden_state, target_list[idx]
+        )
+        # Cell state has no direct gradient from loss at the final step
+        grad_cell = np.zeros(self.lstm_param.hidden_size)
+        self.time_steps[idx].backward(grad_hidden, grad_cell)
         idx -= 1
 
-        ### ... following nodes also get diffs from next nodes, hence we add diffs to diff_h
-        ### we also propagate error along constant error carousel using diff_s
+        # Walk backwards through remaining time steps
         while idx >= 0:
-            loss += loss_layer.loss(self.lstm_node_list[idx].state.h, y_list[idx])
-            diff_h = loss_layer.bottom_diff(
-                self.lstm_node_list[idx].state.h, y_list[idx]
+            loss += loss_layer.loss(
+                self.time_steps[idx].state.hidden_state, target_list[idx]
             )
-            diff_h += self.lstm_node_list[idx + 1].state.bottom_diff_h
-            diff_s = self.lstm_node_list[idx + 1].state.bottom_diff_s
-            self.lstm_node_list[idx].top_diff_is(diff_h, diff_s)
+            # Gradient from the loss at this time step + gradient from the next time step
+            grad_hidden = loss_layer.bottom_diff(
+                self.time_steps[idx].state.hidden_state, target_list[idx]
+            )
+            grad_hidden += self.time_steps[idx + 1].state.grad_prev_hidden
+            grad_cell = self.time_steps[idx + 1].state.grad_prev_cell
+            self.time_steps[idx].backward(grad_hidden, grad_cell)
             idx -= 1
 
         return loss
 
-    def x_list_clear(self):
-        self.x_list = []
+    def reset_inputs(self):
+        self.inputs = []
 
-    def x_list_add(self, x):
-        self.x_list.append(x)
-        if len(self.x_list) > len(self.lstm_node_list):
-            # need to add new lstm node, create new state mem
-            lstm_state = LstmState(self.lstm_param.mem_cell_ct, self.lstm_param.x_dim)
-            self.lstm_node_list.append(LstmNode(self.lstm_param, lstm_state))
+    def add_input(self, x):
+        self.inputs.append(x)
+        if len(self.inputs) > len(self.time_steps):
+            lstm_state = LstmState(
+                self.lstm_param.hidden_size, self.lstm_param.input_size
+            )
+            self.time_steps.append(LstmNode(self.lstm_param, lstm_state))
 
-        # get index of most recent x input
-        idx = len(self.x_list) - 1
+        idx = len(self.inputs) - 1
         if idx == 0:
-            # no recurrent inputs yet
-            self.lstm_node_list[idx].bottom_data_is(x)
+            self.time_steps[idx].forward(x)
         else:
-            s_prev = self.lstm_node_list[idx - 1].state.s
-            h_prev = self.lstm_node_list[idx - 1].state.h
-            self.lstm_node_list[idx].bottom_data_is(x, s_prev, h_prev)
+            prev_cell_state = self.time_steps[idx - 1].state.cell_state
+            prev_hidden_state = self.time_steps[idx - 1].state.hidden_state
+            self.time_steps[idx].forward(x, prev_cell_state, prev_hidden_state)
