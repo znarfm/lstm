@@ -1,0 +1,9 @@
+[project]
+name = "lstm"
+version = "0.1.0"
+description = "simple lstm for mt course"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "numpy>=2.4.3",
+]
