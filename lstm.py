@@ -69,7 +69,7 @@ class LstmParam:
 
 class LstmState:
     def __init__(self, hidden_size, input_size):
-        self.cell_input = np.zeros(hidden_size)  # g: new candidate info (tanh)
+        self.cell_input = np.zeros(hidden_size)  # g or C: new candidate info (tanh)
         self.input_gate = np.zeros(hidden_size)  # i: how much new info to write
         self.forget_gate = np.zeros(hidden_size)  # f: how much old memory to keep
         self.output_gate = np.zeros(hidden_size)  # o: what to expose from memory
@@ -107,19 +107,16 @@ class LstmNode:
 
         # Compute gate activations
         self.state.cell_input = np.tanh(
-            np.dot(self.param.weight_cell, concat_input) + self.param.bias_cell
+            self.param.weight_cell @ concat_input + self.param.bias_cell
         )
         self.state.input_gate = sigmoid(
-            np.dot(self.param.weight_input_gate, concat_input)
-            + self.param.bias_input_gate
+            self.param.weight_input_gate @ concat_input + self.param.bias_input_gate
         )
         self.state.forget_gate = sigmoid(
-            np.dot(self.param.weight_forget_gate, concat_input)
-            + self.param.bias_forget_gate
+            self.param.weight_forget_gate @ concat_input + self.param.bias_forget_gate
         )
         self.state.output_gate = sigmoid(
-            np.dot(self.param.weight_output_gate, concat_input)
-            + self.param.bias_output_gate
+            self.param.weight_output_gate @ concat_input + self.param.bias_output_gate
         )
 
         # Update cell state: keep old memory (forget gate) + write new info (input gate)
@@ -177,16 +174,10 @@ class LstmNode:
 
         # Compute gradient w.r.t. the concatenated input to propagate backwards
         grad_concat_input = np.zeros_like(self.concat_input)
-        grad_concat_input += np.dot(
-            self.param.weight_input_gate.T, delta_input_gate_raw
-        )
-        grad_concat_input += np.dot(
-            self.param.weight_forget_gate.T, delta_forget_gate_raw
-        )
-        grad_concat_input += np.dot(
-            self.param.weight_output_gate.T, delta_output_gate_raw
-        )
-        grad_concat_input += np.dot(self.param.weight_cell.T, delta_cell_input_raw)
+        grad_concat_input += self.param.weight_input_gate.T @ delta_input_gate_raw
+        grad_concat_input += self.param.weight_forget_gate.T @ delta_forget_gate_raw
+        grad_concat_input += self.param.weight_output_gate.T @ delta_output_gate_raw
+        grad_concat_input += self.param.weight_cell.T @ delta_cell_input_raw
 
         # Split concat gradient: the h(t-1) portion flows back to the previous node
         self.state.grad_prev_cell = delta_cell_state * self.state.forget_gate
