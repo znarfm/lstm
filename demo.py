@@ -1,5 +1,5 @@
 """
-Demo: Running Sum (Multi-Sequence)
+Demo: Running Sum
 
 Goal: Train the LSTM to compute the running sum of sequences.
 
@@ -15,11 +15,11 @@ targets before training and denormalize predictions for display.
 """
 
 import numpy as np
-from rich import print
+from rich import box, print
 from rich.console import Console
 from rich.table import Table
-from rich import box
-from lstm import LstmParam, LstmNetwork
+
+from lstm import LstmNetwork, LstmParam
 
 console = Console()
 
@@ -108,9 +108,9 @@ def main():
 
     # --- Training sequences ---
     sequences = [
-        [1, -1, 1, -1, 1, -1],  # alternating → sum stays near 0
+        [1, -1, 1, -1, 1, -1],  # alternating: sum stays near 0
         [1, 1, 1, -1, -1, -1],  # rises then falls
-        [1, 1, 1, 1, 1, 1],  # all positive → sum grows to 6
+        [1, 1, 1, 1, 1, 1],  # all positive: sum grows to 6
         [-1, -1, -1, 1, 1, 1],  # falls then rises
     ]
 
