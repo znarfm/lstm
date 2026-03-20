@@ -66,6 +66,36 @@ class LstmParam:
         self.bias_forget_gate_grad = np.zeros_like(self.bias_forget_gate)
         self.bias_output_gate_grad = np.zeros_like(self.bias_output_gate)
 
+    def save(self, filepath, **kwargs):
+        np.savez(
+            filepath,
+            hidden_size=self.hidden_size,
+            input_size=self.input_size,
+            weight_cell=self.weight_cell,
+            weight_input_gate=self.weight_input_gate,
+            weight_forget_gate=self.weight_forget_gate,
+            weight_output_gate=self.weight_output_gate,
+            bias_cell=self.bias_cell,
+            bias_input_gate=self.bias_input_gate,
+            bias_forget_gate=self.bias_forget_gate,
+            bias_output_gate=self.bias_output_gate,
+            **kwargs
+        )
+
+    @classmethod
+    def load(cls, filepath):
+        data = np.load(filepath)
+        param = cls(data['hidden_size'].item(), data['input_size'].item())
+        param.weight_cell = data['weight_cell']
+        param.weight_input_gate = data['weight_input_gate']
+        param.weight_forget_gate = data['weight_forget_gate']
+        param.weight_output_gate = data['weight_output_gate']
+        param.bias_cell = data['bias_cell']
+        param.bias_input_gate = data['bias_input_gate']
+        param.bias_forget_gate = data['bias_forget_gate']
+        param.bias_output_gate = data['bias_output_gate']
+        return param, data
+
 
 class LstmState:
     def __init__(self, hidden_size, input_size):
