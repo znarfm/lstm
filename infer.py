@@ -13,6 +13,7 @@ from lstm import LstmNetwork, LstmParam
 
 console = Console()
 
+
 def active_alarm(sequence):
     """Compute whether the alarm is active at each time step."""
     is_active = False
@@ -24,6 +25,7 @@ def active_alarm(sequence):
             is_active = False
         result.append(1.0 if is_active else 0.0)
     return result
+
 
 def main():
     model_path = "lstm_model.npz"
@@ -46,18 +48,20 @@ def main():
     while True:
         try:
             user_input = input("Enter sequence: ").strip()
-            if user_input.lower() in ['q', 'quit', 'exit']:
+            if user_input.lower() in ["q", "quit", "exit"]:
                 break
-            
+
             if not user_input:
                 continue
 
             # Parse input
-            parts = [p.strip() for p in user_input.split(',')]
+            parts = [p.strip() for p in user_input.split(",")]
             seq = [int(p) for p in parts if p]
 
             if not seq or not all(v in [0, 1, 2] for v in seq):
-                print("[yellow]Invalid sequence. Please enter numbers 0, 1, or 2 separated by commas.[/yellow]")
+                print(
+                    "[yellow]Invalid sequence. Please enter numbers 0, 1, or 2 separated by commas.[/yellow]"
+                )
                 continue
 
             # Calculate actual state
@@ -66,13 +70,13 @@ def main():
             # Predict with LSTM
             network.reset_inputs()
             preds = []
-            
+
             for val in seq:
                 # Normalize input to [-1, 1] range
                 norm_val = val - 1.0
                 x = np.array([norm_val], dtype=float)
                 network.add_input(x)
-                
+
                 # Get prediction and map back to [0, 1] space
                 idx = len(network.inputs) - 1
                 hidden_state = network.time_steps[idx].state.hidden_state[0]
@@ -97,7 +101,7 @@ def main():
                     f"{seq[t]:d}",
                     "Active" if actual_states[t] == 1.0 else "Normal",
                     f"{preds[t]:.2f}",
-                    f"{abs(preds[t] - actual_states[t]):.2f}"
+                    f"{abs(preds[t] - actual_states[t]):.2f}",
                 )
 
             console.print(table)
@@ -109,6 +113,7 @@ def main():
         except KeyboardInterrupt:
             print("\nExiting...")
             break
+
 
 if __name__ == "__main__":
     main()

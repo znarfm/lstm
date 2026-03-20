@@ -20,6 +20,7 @@ from lstm import LstmNetwork, LstmParam
 
 console = Console()
 
+
 class MSELoss:
     @classmethod
     def loss(cls, pred, target):
@@ -30,6 +31,7 @@ class MSELoss:
         grad = np.zeros_like(pred)
         grad[0] = 2 * (pred[0] - target)
         return grad
+
 
 def active_alarm(sequence):
     """Compute whether the alarm is active at each time step."""
@@ -43,9 +45,8 @@ def active_alarm(sequence):
         result.append(1.0 if is_active else 0.0)
     return result
 
-def print_epoch_table(
-    epoch, total_loss, sequences, all_targets_raw, network
-):
+
+def print_epoch_table(epoch, total_loss, sequences, all_targets_raw, network):
     table = Table(
         title=f"Epoch {epoch:4d} | Total Loss: {total_loss:.5f}",
         box=box.SIMPLE_HEAD,
@@ -63,7 +64,7 @@ def print_epoch_table(
         # 1 -> 0
         # 2 -> 1
         inputs = [np.array([v - 1.0], dtype=float) for v in seq]
-        
+
         network.reset_inputs()
         for x in inputs:
             network.add_input(x)
@@ -85,29 +86,31 @@ def print_epoch_table(
                 str([f"{v:.2f}" for v in errors]),
             )
         elif i == 2:
-            table.add_row("...","...","...","...","...")
+            table.add_row("...", "...", "...", "...", "...")
 
     console.print(table)
 
 
 def main():
-    np.random.seed(42)
+    np.random.seed(67)
 
     num_sequences = 100
     min_length = 5
     max_length = 15
 
     sequences = []
-    
+
     # Add explicit edge cases
-    sequences.extend([
-        [0, 0, 0, 0],              # Never goes off
-        [1, 0, 0, 0],              # Goes off immediately
-        [1, 0, 2, 0],              # Goes off, then resets
-        [0, 1, 0, 2, 0, 1],        # Multiple alarms
-        [2, 2, 0, 1, 2],           # Reset before alarm
-        [1, 1, 1, 2, 2],           # Duplicate alarms/resets
-    ])
+    sequences.extend(
+        [
+            [0, 0, 0, 0],  # Never goes off
+            [1, 0, 0, 0],  # Goes off immediately
+            [1, 0, 2, 0],  # Goes off, then resets
+            [0, 1, 0, 2, 0, 1],  # Multiple alarms
+            [2, 2, 0, 1, 2],  # Reset before alarm
+            [1, 1, 1, 2, 2],  # Duplicate alarms/resets
+        ]
+    )
 
     for _ in range(num_sequences):
         length = np.random.randint(min_length, max_length + 1)
@@ -118,13 +121,9 @@ def main():
     all_targets_raw = [active_alarm(seq) for seq in sequences]
 
     # Map target outputs: target is [0, 1]. We map it to LSTM space which is [-1, 1]
-    all_targets_norm = [
-        [t * 2.0 - 1.0 for t in targets] for targets in all_targets_raw
-    ]
+    all_targets_norm = [[t * 2.0 - 1.0 for t in targets] for targets in all_targets_raw]
     # Normalize inputs to [-1, 1] range
-    all_inputs_norm = [
-        [v - 1.0 for v in seq] for seq in sequences
-    ]
+    all_inputs_norm = [[v - 1.0 for v in seq] for seq in sequences]
 
     hidden_size = 16
     input_size = 1

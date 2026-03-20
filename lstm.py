@@ -79,21 +79,21 @@ class LstmParam:
             bias_input_gate=self.bias_input_gate,
             bias_forget_gate=self.bias_forget_gate,
             bias_output_gate=self.bias_output_gate,
-            **kwargs
+            **kwargs,
         )
 
     @classmethod
     def load(cls, filepath):
         data = np.load(filepath)
-        param = cls(data['hidden_size'].item(), data['input_size'].item())
-        param.weight_cell = data['weight_cell']
-        param.weight_input_gate = data['weight_input_gate']
-        param.weight_forget_gate = data['weight_forget_gate']
-        param.weight_output_gate = data['weight_output_gate']
-        param.bias_cell = data['bias_cell']
-        param.bias_input_gate = data['bias_input_gate']
-        param.bias_forget_gate = data['bias_forget_gate']
-        param.bias_output_gate = data['bias_output_gate']
+        param = cls(data["hidden_size"].item(), data["input_size"].item())
+        param.weight_cell = data["weight_cell"]
+        param.weight_input_gate = data["weight_input_gate"]
+        param.weight_forget_gate = data["weight_forget_gate"]
+        param.weight_output_gate = data["weight_output_gate"]
+        param.bias_cell = data["bias_cell"]
+        param.bias_input_gate = data["bias_input_gate"]
+        param.bias_forget_gate = data["bias_forget_gate"]
+        param.bias_output_gate = data["bias_output_gate"]
         return param, data
 
 
