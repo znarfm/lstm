@@ -46,9 +46,9 @@ def active_alarm(sequence):
     return result
 
 
-def print_epoch_table(epoch, total_loss, sequences, all_targets_raw, network):
+def print_epoch_table(epoch, average_loss, sequences, all_targets_raw, network):
     table = Table(
-        title=f"Epoch {epoch:4d} | Total Loss: {total_loss:.5f}",
+        title=f"Epoch {epoch:4d} | Average Loss: {average_loss:.5f}",
         box=box.SIMPLE_HEAD,
         show_lines=True,
     )
@@ -103,9 +103,9 @@ def main():
     # Add explicit edge cases
     sequences.extend(
         [
-            [0, 0, 0, 0],  # Never goes off
-            [1, 0, 0, 0],  # Goes off immediately
-            [1, 0, 2, 0],  # Goes off, then resets
+            [0, 0, 0, 0],  # No alarm
+            [1, 0, 0, 0],  # Alarms immediately
+            [1, 0, 2, 0],  # Alarms, then resets
             [0, 1, 0, 2, 0, 1],  # Multiple alarms
             [2, 2, 0, 1, 2],  # Reset before alarm
             [1, 1, 1, 2, 2],  # Duplicate alarms/resets
@@ -128,7 +128,7 @@ def main():
     hidden_size = 16
     input_size = 1
     learning_rate = 0.05
-    num_epochs = 1000
+    num_epochs = 500
 
     print(f"\n[bold]Training for {num_epochs} epochs...[/bold]\n")
 
@@ -148,8 +148,10 @@ def main():
             param.apply_gradients(lr=learning_rate)
 
         if epoch == 0 or (epoch + 1) % 50 == 0:
+            total_items = sum(len(seq) for seq in sequences)
+            average_loss = total_loss / total_items
             print_epoch_table(
-                epoch + 1, total_loss, sequences, all_targets_raw, network
+                epoch + 1, average_loss, sequences, all_targets_raw, network
             )
 
     model_path = "lstm_model.npz"
